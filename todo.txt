@@ -18,6 +18,9 @@ Features:
 *additional features::
 - reports
 
+Superuser admin: admin
+Password:  admin123
+
 Technologies:
 - Django + SqlLite + BASIC FRONTEND (BOOTSTRAP) + crispy forms - https://startbootstrap.com/templates/ecommerce/
 

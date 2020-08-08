@@ -11,15 +11,16 @@
         <h1>Welcome to BlueGecko ecommerce</h1>
         <br>
         <h2>Here is the list of categories</h2>
-        {% if all_categories %}
-            <ul>
-                {% for category in all_categories %}
-                    <li><a href="{% url 'products:CategoryView' category.id %}">{{ category.category_name }}</a></li>
-                {% endfor %}
-            </ul>
-            {% else %}
-                <p>No categories are available.</p>
-            {% endif %}
+        {% block categorycontent %}
+        {% if categories %}
+
+            {% for category in categories %}
+                <li><a href="{% url 'products:category-prod-list' category_id=category.id %}"> {{ category.category_name }}</a></li>
+            {% endfor %}
+        {% else %}
+            <p>No categories currently saved.</p>
+        {% endif %}
+        {% endblock %}
 
     </body>
 </html>

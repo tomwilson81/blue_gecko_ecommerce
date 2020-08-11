@@ -4,12 +4,12 @@ from django.views.generic import DetailView
 
 def home_page(request):
     categories = Category.objects.all()
-    products = Product.objects.filter(category__id=categories[0].id)
+    products = Product.objects.all()
     context = {
         'products': products,
         'categories': categories,
     }
-    return render(request, 'products/product_list.html', context)
+    return render(request, 'products/home.html', context)
 
 
 def category_product_list(request, category_id):
@@ -31,4 +31,8 @@ def product_detail(request, product_id):
         #'categories': categories,
         #'reviews': review_qs
     }
-    return render(request, 'products/product.html', context)
+    return render(request, 'products/product-page.html', context)
+
+def checkout(request):
+    return render(request, 'checkout.html')
+

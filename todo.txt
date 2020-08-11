@@ -18,7 +18,7 @@ Features:
 *additional features::
 - reports
 
-Superuser admin: admin
+Superuser admin: tomwilson
 Password:  admin123
 
 Technologies:

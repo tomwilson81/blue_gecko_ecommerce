@@ -4,6 +4,11 @@ from django.db import models
 from django.urls import reverse
 from django.contrib.auth.models import User
 
+CATEGORY_CHOICES = (
+    ('S', 'Shirts'),
+    ('SW', 'Swim Wear'),
+    ('OW', 'Outerwear')
+)
 LABEL_CHOICES = (
     ('P', 'primary'),
     ('S', 'secondary'),
@@ -21,20 +26,32 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    category = models.CharField(choices=CATEGORY_CHOICES, max_length=2)
     product_name = models.CharField(max_length=200)
     product_description = models.TextField(max_length=2000, default='')
     #product_image = models.URLField(max_length=900, default='https://via.placeholder.com/300x400?text=No+photo')
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     label = models.CharField(choices=LABEL_CHOICES, max_length=1)
-    #slug = models.SlugField()
+    slug = models.SlugField()
 
     def __str__(self):
         return self.product_name
 
     def get_absolute_url(self):
-        return reverse('products:product-detail', args=[str(self.id)])
+        return reverse('products:product-detail', kwargs={
+            'slug': self.slug
+        })
 
+    def get_add_to_cart_url(self):
+        return reverse('products:add-to-cart', kwargs={
+            'slug': self.slug
+        })
+
+    def get_remove_from_cart_url(self):
+        return reverse('products:remove-from-cart', kwargs={
+            'slug': self.slug
+        })
 
 class Review(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
@@ -51,15 +68,18 @@ class Review(models.Model):
 
 
 class OrderItem(models.Model):
-    item = models.ForeignKey(Product, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    ordered = models.BooleanField(default=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1)
 
     def __str__(self):
-        return self.item
+        return f"{self.quantity} of {self.product.product_name}"
 
 
 class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    item = models.ManyToManyField(OrderItem)
+    product = models.ManyToManyField(OrderItem)
     start_date = models.DateTimeField(auto_now_add=True)
     ordered_date = models.DateTimeField()
     ordered = models.BooleanField(default=False)

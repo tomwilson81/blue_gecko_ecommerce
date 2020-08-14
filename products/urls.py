@@ -4,8 +4,13 @@ from . import views
 app_name = 'products'
 
 urlpatterns = [
-    path('', views.home_page, name='home-page'),
-    path('category/<str:category_id>', views.category_product_list, name='category-prod-list'),
+    path('', views.HomeView.as_view(), name='home-page'),
+    #path('category/<str:category_id>', views.category_product_list, name='category-prod-list'),
     #path('product/<int:pk>/', views.ProductDetailView.as_view(), name='product-detail'),
-    path('product/<str:product_id>', views.product_detail, name='product-detail'),
+    #path('product/<str:product_id>', views.product_detail, name='product-detail'),
+    path('checkout/', views.checkout, name='checkout'),
+    path('product/<slug>/', views.ProductDetailView.as_view(), name='product-detail'),
+    path('add-to-cart/<slug>/', views.add_to_cart, name='add-to-cart'),
+    path('remove-from-cart/<slug>/', views.remove_from_cart, name='remove-from-cart'),
+
 ]

@@ -7,6 +7,7 @@ from django.utils import timezone
 
 class HomeView(ListView):
     model = Product
+    paginate_by = 10
     template_name = "products/home.html"
 
 class ProductDetailView(DetailView):
@@ -88,7 +89,7 @@ def remove_from_cart(request, slug):
 #         'products': products,
 #         'categories': categories,
 #     }
-#     return render(request, 'products/category.html', context)
+#     return render(request, 'products/home.html', context)
 
 
 # def product_detail(request, product_id):

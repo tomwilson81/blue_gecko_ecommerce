@@ -3,8 +3,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Category, Product, OrderItem, Order
+from .models import Category, Product, OrderItem, Order, BillingAddress
 from django.views.generic import ListView, DetailView, View
+from .forms import CheckoutForm
 from django.utils import timezone
 
 
@@ -32,8 +33,45 @@ class ProductDetailView(DetailView):
     template_name = "products/product.html"
 
 
-def checkout(request):
-    return render(request, 'products/checkout.html')
+class CheckoutView(View):
+    def get(self, *args, **kwargs):
+        # form
+        form = CheckoutForm()
+        context = {
+            'form': form
+        }
+        return render(self.request, 'products/checkout.html', context)
+
+    def post(self, *args, **kwargs):
+        form = CheckoutForm(self.request.POST or None)
+        try:
+            order = Order.objects.get(user=self.request.user, ordered=False)
+            if form.is_valid():
+                street_address = form.cleaned_data.get('street_address')
+                apartment_address = form.cleaned_data.get('apartment_address')
+                country = form.cleaned_data.get('country')
+                zip = form.cleaned_data.get('zip')
+                # same_shipping_address = form.cleaned_data.get('same_shipping_address')
+                # save_info = form.cleaned_data.get('save_info')
+                payment_option = form.cleaned_data.get('payment_option')
+                billing_address = BillingAddress(
+                    user=self.request.user,
+                    street_address=street_address,
+                    apartment_address=apartment_address,
+                    country=country,
+                    zip=zip
+                )
+                billing_address.save()
+                order.billing_address = billing_address
+                order.save()
+                # Add redirect to selected payment option
+                return redirect("products:checkout")
+            messages.warning(self.request, "Failed checkout")
+            return redirect('products:checkout')
+        except ObjectDoesNotExist:
+            messages.error(self.request, "You do not have an active order.")
+            return redirect('products:order-summary')
+
 
 @login_required
 def add_to_cart(request, slug):

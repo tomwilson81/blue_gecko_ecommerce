@@ -30,6 +30,7 @@ class Product(models.Model):
     category = models.CharField(choices=CATEGORY_CHOICES, max_length=2)
     product_name = models.CharField(max_length=200)
     product_description = models.TextField(max_length=2000, default='')
+    product_image = models.ImageField()
     #product_image = models.URLField(max_length=900, default='https://via.placeholder.com/300x400?text=No+photo')
     price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
@@ -102,6 +103,7 @@ class Order(models.Model):
         'BillingAddress', on_delete=models.SET_NULL, blank=True, null=True)
     payment = models.ForeignKey(
         'Payment', on_delete=models.SET_NULL, blank=True, null=True)
+    coupon = models.ForeignKey('Coupon', on_delete=models.SET_NULL, blank=True, null=True)
 
     def __str__(self):
         return self.user.username
@@ -110,6 +112,7 @@ class Order(models.Model):
         total = 0
         for order_item in self.product.all():
             total += order_item.get_final_price()
+        total -= self.coupon.amount
         return total
 
 
@@ -133,3 +136,10 @@ class Payment(models.Model):
     def __str__(self):
         return self.user.username
 
+
+class Coupon(models.Model):
+    code = models.CharField(max_length=25)
+    amount = models.DecimalField(max_digits=5, decimal_places=2)
+
+    def __str__(self):
+        return self.code

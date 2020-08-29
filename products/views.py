@@ -6,9 +6,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Category, Product, OrderItem, Order, BillingAddress, Payment
+from .models import Category, Product, OrderItem, Order, BillingAddress, Payment, Coupon
 from django.views.generic import ListView, DetailView, View
-from .forms import CheckoutForm
+from .forms import CheckoutForm, CouponForm
 from django.utils import timezone
 
 #stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -40,12 +40,19 @@ class ProductDetailView(DetailView):
 
 class CheckoutView(View):
     def get(self, *args, **kwargs):
-        # form
-        form = CheckoutForm()
-        context = {
-            'form': form
-        }
-        return render(self.request, 'products/checkout.html', context)
+        try:
+            order = Order.objects.get(user=self.request.user, ordered=False)
+            form = CheckoutForm()
+            context = {
+                'form': form,
+                'order': order,
+                'couponform': CouponForm(),
+                'DISPLAY_COUPON_FORM': True,
+            }
+            return render(self.request, 'products/checkout.html', context)
+        except ObjectDoesNotExist:
+            messages.info(request, "You do not have an active order.")
+            return redirect("products:order-summary")
 
     def post(self, *args, **kwargs):
         form = CheckoutForm(self.request.POST or None)
@@ -85,10 +92,15 @@ class CheckoutView(View):
 class PaymentView(View):
     def get(self, *args, **kwargs):
         order = Order.objects.get(user=self.request.user, ordered=False)
-        context = {
-            'order': order
-        }
-        return render(self.request, 'products/payment.html', context)
+        if order.billing_address:
+            context = {
+                'order': order,
+                'DISPLAY_COUPON_FORM': False,
+            }
+            return render(self.request, 'products/payment.html', context)
+        else:
+            messages.warning(self.request, "You have not added a billing address.")
+            return redirect('products:checkout')
 
     def post(self, *args, **kwargs):
         stripe.api_key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
@@ -112,6 +124,11 @@ class PaymentView(View):
             payment.save()
 
             # assign the payment to the order
+
+            order_product = order.product.all()
+            order_product.update(ordered=True)
+            for product in order_product:
+                product.save()
 
             order.ordered = True
             order.payment = payment
@@ -241,38 +258,27 @@ def remove_single_item_from_cart(request, slug):
         messages.info(request, "You do not have an active cart.")
         return redirect("products:product-detail", slug=slug)
 
+def get_coupon(request, code):
+    try:
+        coupon = Coupon.objects.get(code=code)
+        return coupon
 
+    except ObjectDoesNotExist:
+        messages.info(request, "This coupon does not exist.")
+        return redirect("products:checkout")
 
+class AddCouponView(View):
+    def post(self, *args, **kwargs):
+        form = CouponForm(self.request.POST or None)
+        if form.is_valid():
+            try:
+                code = form.cleaned_data.get('code')
+                order = Order.objects.get(user=self.request.user, ordered=False)
+                order.coupon = get_coupon(self.request, code)
+                order.save()
+                messages.success(self.request, "Coupon successfully added.")
+                return redirect("products:checkout")
 
-# def home_page(request):
-#     categories = Category.objects.all()
-#     products = Product.objects.all()
-#     context = {
-#         'products': products,
-#         'categories': categories,
-#     }
-#     return render(request, 'products/home.html', context)
-
-
-# def category_product_list(request, category_id):
-#     categories = Category.objects.get(pk=category_id)
-#     products = Product.objects.filter(category__id=category_id)
-#     context = {
-#         'products': products,
-#         'categories': categories,
-#     }
-#     return render(request, 'products/home.html', context)
-
-
-# def product_detail(request, product_id):
-#     categories = Category.objects.all()
-#     products = Product.objects.get(pk=product_id)
-#     #review_qs = product.review_set.all()
-#     context = {
-#         'products': products,
-#         'categories': categories,
-#         #'reviews': review_qs
-#     }
-#     return render(request, 'products/product.html', context)
-
-
+            except ObjectDoesNotExist:
+                messages.info(self.request, "You do not have an active order.")
+                return redirect("products:order-summary")

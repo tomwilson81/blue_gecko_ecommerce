@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Product, OrderItem, Order, Payment, Coupon, Refund
+from .models import Category, Product, OrderItem, Order, Payment, Coupon, Refund, Address
 
 def make_refund_approved(modeladmin, request, queryset):
     queryset.update(refund_requested=False, refund_approved=True)
@@ -14,11 +14,13 @@ class OrderAdmin(admin.ModelAdmin):
                     'refund_requested',
                     'refund_approved',
                     'billing_address',
+                    'shipping_address',
                     'payment',
                     'coupon',
                     ]
     list_display_links = ['user',
         'billing_address',
+        'shipping_address',
         'payment',
         'coupon']
 
@@ -34,11 +36,32 @@ class OrderAdmin(admin.ModelAdmin):
 
     actions = [make_refund_approved]
 
+class AddressAdmin(admin.ModelAdmin):
+    list_display = [
+        'user',
+        'street_address',
+        'apartment_address',
+        'country',
+        'zip',
+        'address_type',
+        'default'
+    ]
+    list_filter = ['default', 'address_type', 'country']
+    search_fields = ['user', 'street_address', 'apartment_address', 'zip']
+    #
+    # def get_form(self, request, *args, **kwargs):
+    #     form = super(CheckoutForm, self).get_form(request, *args, **kwargs)
+    #     form.current_user = request.user
+    #     return form
+
+
 admin.site.register(Category)
 admin.site.register(Product)
 admin.site.register(OrderItem)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(Payment)
 admin.site.register(Coupon)
+admin.site.register(Refund)
+admin.site.register(Address, AddressAdmin)
 
 

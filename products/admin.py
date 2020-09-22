@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Product, OrderItem, Order, Payment, Coupon, Refund, Address
+from .models import Category, Product, OrderItem, Order, Payment, Coupon, Refund, Address, UserProfile
 
 def make_refund_approved(modeladmin, request, queryset):
     queryset.update(refund_requested=False, refund_approved=True)
@@ -48,11 +48,6 @@ class AddressAdmin(admin.ModelAdmin):
     ]
     list_filter = ['default', 'address_type', 'country']
     search_fields = ['user', 'street_address', 'apartment_address', 'zip']
-    #
-    # def get_form(self, request, *args, **kwargs):
-    #     form = super(CheckoutForm, self).get_form(request, *args, **kwargs)
-    #     form.current_user = request.user
-    #     return form
 
 
 admin.site.register(Category)
@@ -63,5 +58,7 @@ admin.site.register(Payment)
 admin.site.register(Coupon)
 admin.site.register(Refund)
 admin.site.register(Address, AddressAdmin)
+admin.site.register(UserProfile)
+
 
 

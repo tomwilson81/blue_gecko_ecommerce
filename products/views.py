@@ -6,15 +6,15 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Category, Product, OrderItem, Order, Address, Payment, Coupon, Refund
+from .models import Category, Product, OrderItem, Order, Address, Payment, Coupon, Refund, UserProfile
 from django.views.generic import ListView, DetailView, View
-from .forms import CheckoutForm, CouponForm, RefundForm
+from .forms import CheckoutForm, CouponForm, RefundForm, PaymentForm
 from django.utils import timezone
 
 import random
 import string
 #stripe.api_key = settings.STRIPE_SECRET_KEY
-
+stripe.api_key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
 
 def create_ref_code():
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=20))
@@ -25,6 +25,7 @@ def is_valid_form(values):
         if field == '':
             valid = False
     return valid
+
 
 class HomeView(ListView):
     model = Product
@@ -130,6 +131,14 @@ class CheckoutView(View):
 
                         set_default_shipping = form.cleaned_data.get('set_default_shipping')
                         if set_default_shipping:
+                            address_qs = Address.objects.filter(
+                                user=self.request.user,
+                                address_type='S',
+                                default=True
+                            )
+                            if address_qs.exists():
+                                address_qs.update(default=False)
+
                             shipping_address.default = True
                             shipping_address.save()
                     else:
@@ -186,6 +195,14 @@ class CheckoutView(View):
 
                         set_default_billing = form.cleaned_data.get('set_default_billing')
                         if set_default_billing:
+                            address_qs = Address.objects.filter(
+                                user=self.request.user,
+                                address_type='B',
+                                default=True
+                            )
+                            if address_qs.exists():
+                                address_qs.update(default=False)
+
                             billing_address.default = True
                             billing_address.save()
                     else:
@@ -213,6 +230,20 @@ class PaymentView(View):
                 'order': order,
                 'DISPLAY_COUPON_FORM': False,
             }
+            userprofile = self.request.user.userprofile
+            if userprofile.one_click_purchasing:
+                # fetch the user's card details
+                cards = stripe.Customer.list_sources(
+                    userprofile.stripe_customer_id,
+                    limit=3,
+                    object='card',
+                )
+                cards_list = cards['data']
+                if len(cards_list) > 0:
+                    # update context with user default card
+                    context.update({
+                        'card': cards_list[0]
+                    })
             return render(self.request, 'products/payment.html', context)
         else:
             messages.warning(self.request, "You have not added a billing address.")
@@ -222,76 +253,106 @@ class PaymentView(View):
         stripe.api_key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
         # `source` is obtained with Stripe.js; see https://stripe.com/docs/payments/accept-a-payment-charges#web-create-token
         order = Order.objects.get(user=self.request.user, ordered=False)
-        token = self.request.POST.get('stripeToken')
-        amount = int(order.get_total() * 100)
+        form = PaymentForm(self.request.POST)
+        userprofile = UserProfile.objects.get(user=self.request.user)
+        if form.is_valid():
+            token = form.cleaned_data.get('stripeToken')
+            save = form.cleaned_data.get('save')
+            use_default = form.cleaned_data.get('use_default')
 
-        try:
-            charge = stripe.Charge.create(
-                amount=amount,  # cents
-                currency="usd",
-                source=token,
-            )
+            if save:
+                if userprofile.stripe_customer_id != '' and userprofile.stripe_customer_id is not None:
+                    customer = stripe.Customer.retrieve(
+                        userprofile.stripe_customer_id)
+                    customer.sources.create(source=token)
 
-            # create the payment
-            payment = Payment()
-            payment.stripe_charge_id = charge['id']
-            payment.user = self.request.user
-            payment.amount = order.get_total()
-            payment.save()
+                # allow to fetch cards
+                else:
+                    customer = stripe.Customer.create(
+                        email=self.request.user.email,
+                    )
+                    customer.sources.create(source=token)
+                    userprofile.stripe_customer_id = customer['id']
+                    userprofile.one_click_purchasing = True
+                    userprofile.save()
 
-            # assign the payment to the order
+            amount = int(order.get_total() * 100)
 
-            order_product = order.product.all()
-            order_product.update(ordered=True)
-            for product in order_product:
-                product.save()
+            try:
+                if use_default or save:
+                    charge = stripe.Charge.create(
+                        amount=amount,  # cents
+                        currency="usd",
+                        customer="userprofile.stripe_customer_id",
+                    )
 
-            order.ordered = True
-            order.payment = payment
-            order.ref_code = create_ref_code()
-            order.save()
+                else:
+                    charge = stripe.Charge.create(
+                        amount=amount,  # cents
+                        currency="usd",
+                        source=token,
+                    )
 
-            messages.success(self.request, "Your order was successful.")
-            return redirect("/")
+                # create the payment
+                payment = Payment()
+                payment.stripe_charge_id = charge['id']
+                payment.user = self.request.user
+                payment.amount = order.get_total()
+                payment.save()
 
-        except stripe.error.CardError as e:
-            # Since it's a decline, stripe.error.CardError will be caught
-            body = e.json_body
-            err = body.get('error', {})
-            messages.error(self.request, f"{err.get('message')}")
+                # assign the payment to the order
 
-        except stripe.error.RateLimitError as e:
-            # Too many requests made to the API too quickly
-            messages.error(self.request, "Rate limit error")
-            return redirect("/")
+                order_product = order.product.all()
+                order_product.update(ordered=True)
+                for product in order_product:
+                    product.save()
 
-        except stripe.error.InvalidRequestError as e:
-            # Invalid parameters were supplied to Stripe's API
-            messages.error(self.request, "Invalid parameters")
-            return redirect("/")
+                order.ordered = True
+                order.payment = payment
+                order.ref_code = create_ref_code()
+                order.save()
 
-        except stripe.error.AuthenticationError as e:
-            # Authentication with Stripe's API failed
-            # (maybe you changed API keys recently)
-            messages.error(self.request, "Not authenticated")
-            return redirect("/")
+                messages.success(self.request, "Your order was successful.")
+                return redirect("/")
 
-        except stripe.error.APIConnectionError as e:
-            # Network communication with Stripe failed
-            messages.error(self.request, "Network error")
-            return redirect("/")
+            except stripe.error.CardError as e:
+                # Since it's a decline, stripe.error.CardError will be caught
+                body = e.json_body
+                err = body.get('error', {})
+                messages.error(self.request, f"{err.get('message')}")
 
-        except stripe.error.StripeError as e:
-            # Display a very generic error to the user, and maybe send
-            # yourself an email
-            messages.error(self.request, "Oops, something went wrong. You were not charged. Please try again.")
-            return redirect("/")
+            except stripe.error.RateLimitError as e:
+                # Too many requests made to the API too quickly
+                messages.error(self.request, "Rate limit error")
+                return redirect("/")
 
-        except Exception as e:
-            # Something else happened, completely unrelated to Stripe
-            # send an email to ourselves
-            messages.error(self.request, "A serious error occurred. We have been notified.")
-            return redirect("/")
+            except stripe.error.InvalidRequestError as e:
+                # Invalid parameters were supplied to Stripe's API
+                messages.error(self.request, "Invalid parameters")
+                return redirect("/")
+
+            except stripe.error.AuthenticationError as e:
+                # Authentication with Stripe's API failed
+                # (maybe you changed API keys recently)
+                messages.error(self.request, "Not authenticated")
+                return redirect("/")
+
+            except stripe.error.APIConnectionError as e:
+                # Network communication with Stripe failed
+                messages.error(self.request, "Network error")
+                return redirect("/")
+
+            except stripe.error.StripeError as e:
+                # Display a very generic error to the user, and maybe send
+                # yourself an email
+                messages.error(self.request, "Oops, something went wrong. You were not charged. Please try again.")
+                return redirect("/")
+
+            except Exception as e:
+                # Something else happened, completely unrelated to Stripe
+                # send an email to ourselves
+                messages.error(self.request, "A serious error occurred. We have been notified.")
+                return redirect("/")
 
 
 @login_required

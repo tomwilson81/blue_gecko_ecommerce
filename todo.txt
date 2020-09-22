@@ -31,16 +31,16 @@ Steps:
 4. create models (plan database) !!!!!!!!!!!!!:
     4.1 Products app models:
         - Product:
-            - name
-            - category (FK to Category)
-            - description
-            - photo
-            - price
+            - name - DONE
+            - category (FK to Category) - DONE
+            - description - DONE
+            - photo - DONE
+            - price- DONE
 
         - Category:
-            - name
+            - name - DONE
 
-        - Review:
+        - Review: - STILL TO DO
             - user
             - rating
             - comment
@@ -49,20 +49,32 @@ Steps:
 
     4.2 Orders app models:
         - SinglePartOfOrder:
-            - product
-            - quantity_of_product
-            - full_order (FK to FullOrder) - please doublecheck!!!
+            - product - DONE
+            - quantity_of_product - DONE
+            - full_order (FK to FullOrder) - please doublecheck!!! - DONE
         - FullOrder:
-            - user
+            - user - DONE
             - date
 
 
 5. Views and Templates....
-    5.1 Homepage with Category and Product Listing (views, templates and urls)
-    5.2 Detail Page for Product
-    5.3 User Registration and Login and Detail
-    5.4 Cart implementation
+    5.1 Homepage with Category and Product Listing (views, templates and urls) - DONE
+    5.2 Detail Page for Product - DONE
+    5.3 User Registration and Login and Detail - DONE
+    5.4 Cart implementation - DONE
     5.5 Filters and Search and Sort implementation and Dummy Data Script Generator
-    5.6 Checkout page
+    5.6 Checkout page - DONE
     5.7 User Detail History of orders
     5.8 About / Privacy etc
+
+
+STILL TO DO:
+1. Sign up page and logout page HTML - DONE
+2. Default address - ensure only 1 billing and 1 shipping default allowable - DONE
+3. Checkout page - auto populate address fields when default selected
+4. Update homepage carousel
+5. New user registered - shouldn't have any default address associated - DONE
+6. Fix payment page - use default card and saving card returning Invalid Parameters
+7. Secret JSON file for Stripe API key and Django key
+8. User Reviews
+9.

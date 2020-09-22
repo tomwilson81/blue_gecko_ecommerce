@@ -118,11 +118,11 @@
 
                     </div>
                   </div>
-              </div>
 
-                <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" name="set_default_billing" id="set_default_billing">
-                <label class="custom-control-label" for="set_default_billing">Save as default billing address</label>
+                  <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" name="set_default_billing" id="set_default_billing">
+                    <label class="custom-control-label" for="set_default_billing">Save as default billing address</label>
+                  </div>
               </div>
 
                 {% if default_billing_address %}
@@ -218,8 +218,17 @@
 var hideable_shipping_form = $('.hideable_shipping_form');
 var hideable_billing_form = $('.hideable_billing_form');
 
+var same_billing_address = document.querySelector("input[name=same_billing_address]");
 var use_default_shipping = document.querySelector("input[name=use_default_shipping]");
 var use_default_billing = document.querySelector("input[name=use_default_billing]");
+
+same_billing_address.addEventListener('change', function() {
+  if (this.checked) {
+    hideable_billing_form.hide();
+  } else {
+    hideable_billing_form.show();
+  }
+})
 
 use_default_shipping.addEventListener('change', function() {
   if (this.checked) {

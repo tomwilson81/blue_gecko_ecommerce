@@ -25,6 +25,9 @@ SECRET_KEY = ')&%3*30&4qat4%8kg&hf$1gu6-#5il5ed1vh)n_)r-(ch0x*c1'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# STRIPE SECRET KEY
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_API_KEY")
+
 ALLOWED_HOSTS = []
 
 
@@ -146,3 +149,5 @@ LOGIN_REDIRECT_URL = '/'
 # CRISPY FORMS
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+STRIPE_SECRET_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"

@@ -1,5 +1,5 @@
 import stripe
-import json
+import secret
 
 from django.conf import settings
 from django.contrib import messages
@@ -14,14 +14,10 @@ from django.utils import timezone
 
 import random
 import string
-stripe.api_key = settings.STRIPE_SECRET_KEY
 
-def read_credentials():
-    # secrets
-    secrets = 'secrets.json'
-    with open(secrets) as f:
-        keys = json.loads(f.read())
-        return keys
+stripe.api_key = secret.STRIPE_API_KEY
+#stripe.api_key = settings.STRIPE_SECRET_KEY
+
 
 def create_ref_code():
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=20))
@@ -257,9 +253,7 @@ class PaymentView(View):
             return redirect('products:checkout')
 
     def post(self, *args, **kwargs):
-        # keys = read_credentials()
-        # stripe.api_key = self.keys.get("STRIPE_API_KEY")
-        stripe.api_key = settings.STRIPE_SECRET_KEY
+        stripe.api_key = secret.STRIPE_API_KEY
         # `source` is obtained with Stripe.js; see https://stripe.com/docs/payments/accept-a-payment-charges#web-create-token
         order = Order.objects.get(user=self.request.user, ordered=False)
         form = PaymentForm(self.request.POST)

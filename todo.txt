@@ -18,7 +18,7 @@ Features:
 *additional features::
 - reports
 
-Superuser admin: tomwilson
+Superuser admin: admin
 Password:  admin123
 
 Technologies:
@@ -75,6 +75,7 @@ STILL TO DO:
 4. Update homepage carousel
 5. New user registered - shouldn't have any default address associated - DONE
 6. Fix payment page - use default card and saving card returning Invalid Parameters
-7. Secret JSON file for Stripe API key and Django key
+7. Secret JSON file for Stripe API key and Django key - DONE
 8. User Reviews
-9.
+9. Create Store Locator url and views
+10.

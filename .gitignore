@@ -18,6 +18,7 @@ db.*
 
 #keys
 secrets.json
+secret.py
 
 #Mac
 .DS_Store

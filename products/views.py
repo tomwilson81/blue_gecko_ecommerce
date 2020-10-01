@@ -16,8 +16,6 @@ import random
 import string
 
 stripe.api_key = secret.STRIPE_API_KEY
-#stripe.api_key = settings.STRIPE_SECRET_KEY
-
 
 def create_ref_code():
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=20))
